@@ -1,6 +1,6 @@
 # Repository specification: aether-ai-sdk
 
-**Status:** Documentation baseline copied from the Aether AI master specification. Implementation status must be verified separately.
+**Status:** Repository exists; documentation-only on the inspected `main` branch. No application implementation is present in the audited tree.
 
 ## Mission
 
@@ -8,7 +8,7 @@ Typed client SDK and shared public API schemas for external developers and first
 
 ## Dependencies and connections
 
-Aether API OpenAPI/event schemas.
+Generated public schemas/client from the versioned aether-ai-api contract; the API must not import its own SDK.
 
 ## Owned capabilities
 
