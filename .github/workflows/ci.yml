@@ -25,6 +25,10 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Install dependencies
         run: npm install
+      - name: Dependency audit report
+        run: |
+          npm audit --json > audit-report.json || true
+          node -e 'const a=require("./audit-report.json"); for (const [name,v] of Object.entries(a.vulnerabilities || {})) console.log(name + " | severity=" + v.severity + " | range=" + v.range + " | fixAvailable=" + JSON.stringify(v.fixAvailable))'
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
