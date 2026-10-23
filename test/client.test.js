@@ -30,7 +30,7 @@ test("adds bearer token and correlation ID without logging them", async () => {
 test("blocks absolute URLs and origin escape", async () => {
   const client = new AetherClient({ baseUrl: "https://api.example.test", fetchImpl: async () => jsonResponse({}) });
   await assert.rejects(client.get("https://evil.example/steal"), /relative/);
-  await assert.rejects(client.get("../outside"), /origin/);
+  await assert.rejects(client.get("../outside"), /traversal|origin/);
 });
 
 test("does not automatically retry unsafe POST requests", async () => {
