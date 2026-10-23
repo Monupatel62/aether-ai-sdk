@@ -68,7 +68,7 @@ export function createAetherClient({ baseUrl, getAccessToken, fetchImpl = global
         if (error instanceof AetherApiError) throw error;
         throw new AetherApiError(401, "token_unavailable", "Access token is unavailable");
       }
-      if (typeof token !== "string" || !token.trim() || /[\\r\\n]/.test(token)) throw new AetherApiError(401, "token_unavailable", "Access token is unavailable");
+      if (typeof token !== "string" || !token.trim() || /[\r\n]/.test(token)) throw new AetherApiError(401, "token_unavailable", "Access token is unavailable");
 
       const headers = { authorization: `Bearer ${token}`, accept: "application/json", "content-type": "application/json" };
       if (tenantId) headers["x-tenant-id"] = tenantId;
