@@ -1,0 +1,19 @@
+{
+  "name": "@aether-ai/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed, conservative HTTP client foundation for the Aether AI public API",
+  "exports": {
+    ".": "./src/index.js",
+    "./types": "./src/index.d.ts"
+  },
+  "types": "./src/index.d.ts",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/index.js && node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
