@@ -27,6 +27,10 @@ function normalizePath(path) {
   if (/^[a-z][a-z\d+.-]*:/i.test(path) || path.startsWith("//")) {
     throw new TypeError("path must be relative to the configured base URL");
   }
+  const pathname = path.split(/[?#]/, 1)[0];
+  if (pathname.split("/").some(segment => segment === ".." || segment === ".")) {
+    throw new TypeError("path traversal segments are not allowed");
+  }
   return path.replace(/^\/+/, "");
 }
 
