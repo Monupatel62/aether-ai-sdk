@@ -63,7 +63,7 @@ export async function* parseServerSentEvents(
       let lineBreak = buffer.search(/[\r\n]/);
       while (lineBreak !== -1) {
         // Keep a trailing CR buffered until the next chunk can tell us whether it is CRLF.
-        if (buffer[lineBreak] === "\\r" && lineBreak === buffer.length - 1 && !done) break;
+        if (buffer[lineBreak] === "\r" && lineBreak === buffer.length - 1 && !done) break;
         let line = buffer.slice(0, lineBreak);
         const separator = buffer[lineBreak];
         buffer = buffer.slice(lineBreak + 1);
