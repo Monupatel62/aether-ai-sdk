@@ -20,12 +20,25 @@ describe("AetherClient", () => {
   it("redacts server response bodies from error messages", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ secret: "never show" }), { status: 500 }));
     const client = new AetherClient({ baseUrl: "https://api.example.com", fetch: fetchMock });
-    await expect(client.request("v1/models")).rejects.toThrow("HTTP 500");
-    await expect(client.request("v1/models")).rejects.not.toThrow("never show");
+    let caught: unknown;
+    try {
+      await client.request("v1/models");
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(AetherError);
+    expect((caught as Error).message).toContain("HTTP 500");
+    expect((caught as Error).message).not.toContain("never show");
   });
 
-  it("rejects paths that escape the configured base origin", async () => {
+  it("rejects absolute URLs in request paths", async () => {
     const client = new AetherClient({ baseUrl: "https://api.example.com" });
     await expect(client.request("https://attacker.example/steal")).rejects.toMatchObject({ code: "CONFIGURATION" });
+  });
+
+  it("rejects responses above the configured byte limit", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response("123456", { status: 200 }));
+    const client = new AetherClient({ baseUrl: "https://api.example.com", fetch: fetchMock, maxResponseBytes: 4 });
+    await expect(client.request("v1/models")).rejects.toMatchObject({ code: "RESPONSE_TOO_LARGE" });
   });
 });
