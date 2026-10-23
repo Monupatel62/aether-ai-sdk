@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Upgrade npm for consistent lockless resolution
-        run: npm install --global npm@10.9.9 --legacy-peer-deps
+        run: npm install --global npm@11.4.2
       - name: Install dependencies
         run: npm install
       - name: Dependency audit report
