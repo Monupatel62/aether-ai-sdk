@@ -39,5 +39,23 @@ test("does not leak network exceptions and rejects unsafe token strings", async 
 
 test("maps aborts and timeouts to stable error codes", async () => {
   const client = createAetherClient({ baseUrl: "https://api.example.test", getAccessToken: async () => "token", timeoutMs: 10, fetchImpl: (_url, { signal }) => new Promise((resolve, reject) => signal.addEventListener("abort", () => reject(new Error("aborted"))) ) });
-  await assert.rejects(client.createChatCompletion(input), (e) => e.code === "request_aborted_or_timed_out");
+  await assert.rejects(client.createChatCompletion(input), (e) => e.code === "request_timeout");
+});
+
+
+test("bounds access-token retrieval and request serialization", async () => {
+  const hangingToken = createAetherClient({ baseUrl: "https://api.example.test", getAccessToken: () => new Promise(() => {}), timeoutMs: 10 });
+  await assert.rejects(hangingToken.createChatCompletion(input), (e) => e.code === "request_timeout");
+
+  const client = createAetherClient({ baseUrl: "https://api.example.test", getAccessToken: async () => "token", fetchImpl: async () => response(200, {}) });
+  await assert.rejects(client.createChatCompletion({ model: "m", messages: [{ role: "user", content: "x".repeat(1_100_000) }] }), (e) => e.code === "request_too_large");
+});
+
+test("bounds response reading before JSON parsing", async () => {
+  const client = createAetherClient({
+    baseUrl: "https://api.example.test",
+    getAccessToken: async () => "token",
+    fetchImpl: async () => ({ ok: true, status: 200, headers: { get: () => null }, text: async () => "x".repeat(4 * 1024 * 1024 + 1) }),
+  });
+  await assert.rejects(client.createChatCompletion(input), (e) => e.code === "response_too_large");
 });
