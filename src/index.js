@@ -30,7 +30,7 @@ export function createAetherClient({ baseUrl, getAccessToken, fetchImpl = global
       if (tenantId) headers["x-tenant-id"] = tenantId;
       const response = await fetchImpl(`${root}${path}`, { method: "POST", headers, body: JSON.stringify(body), signal: controller.signal });
       const raw = await response.text();
-      if (Buffer.byteLength(raw) > MAX_RESPONSE_BYTES) throw new AetherApiError(502, "response_too_large", "API response exceeds the configured limit", response.headers?.get?.("x-request-id") ?? null);
+      if (new TextEncoder().encode(raw).byteLength > MAX_RESPONSE_BYTES) throw new AetherApiError(502, "response_too_large", "API response exceeds the configured limit", response.headers?.get?.("x-request-id") ?? null);
       let data;
       try { data = raw ? JSON.parse(raw) : null; } catch { throw new AetherApiError(502, "invalid_response", "API returned an invalid response", response.headers?.get?.("x-request-id") ?? null); }
       const requestId = response.headers?.get?.("x-request-id") ?? null;
