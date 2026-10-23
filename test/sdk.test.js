@@ -21,13 +21,13 @@ test("normalizes API errors without losing request id", async () => {
   await assert.rejects(client.createChatCompletion(input), (e) => e instanceof AetherApiError && e.status === 403 && e.code === "forbidden" && e.requestId === "req-1");
 });
 
-test("rejects unsafe URLs, missing auth callback, malformed input, and unsupported streaming", () => {
+test("rejects unsafe URLs, missing auth callback, malformed input, and unsupported streaming", async () => {
   assert.throws(() => createAetherClient({ baseUrl: "http://api.example.test", getAccessToken: async () => "token" }), TypeError);
   assert.throws(() => createAetherClient({ baseUrl: "https://user:pass@example.test", getAccessToken: async () => "token" }), TypeError);
   assert.throws(() => createAetherClient({ baseUrl: "https://api.example.test" }), TypeError);
   const client = createAetherClient({ baseUrl: "https://api.example.test", getAccessToken: async () => "token", fetchImpl: async () => response(200, {}) });
-  assert.throws(() => client.createChatCompletion({ model: "x", messages: [], stream: false }), TypeError);
-  assert.throws(() => client.createChatCompletion({ ...input, stream: true }), TypeError);
+  await assert.rejects(client.createChatCompletion({ model: "x", messages: [], stream: false }), TypeError);
+  await assert.rejects(client.createChatCompletion({ ...input, stream: true }), TypeError);
 });
 
 test("does not leak network exceptions and rejects unsafe token strings", async () => {
