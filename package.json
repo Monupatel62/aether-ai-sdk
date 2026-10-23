@@ -1,0 +1,10 @@
+{
+  "name": "@aether-ai/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Small HTTP client for the Aether AI public API.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "exports": { ".": "./src/index.js" },
+  "scripts": { "test": "node --test", "check": "node --check src/index.js && node --check test/sdk.test.js" }
+}
