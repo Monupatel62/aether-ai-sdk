@@ -54,9 +54,7 @@ export function createAetherClient({ baseUrl, getAccessToken, fetchImpl = global
     const onAbort = () => controller.abort(signal?.reason);
     signal?.addEventListener("abort", onAbort, { once: true });
     let timeout;
-    let rejectAbort;
     const aborted = new Promise((_, reject) => {
-      rejectAbort = reject;
       controller.signal.addEventListener("abort", () => {
         reject(new AetherApiError(408, timedOut ? "request_timeout" : "request_aborted", timedOut ? "API request timed out" : "API request was aborted"));
       }, { once: true });
