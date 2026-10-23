@@ -23,6 +23,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      - name: Upgrade npm for consistent lockless resolution
+        run: npm install --global npm@10.9.9
       - name: Install dependencies
         run: npm install
       - name: Dependency audit report
