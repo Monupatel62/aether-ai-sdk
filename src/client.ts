@@ -77,7 +77,7 @@ export class AetherClient {
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
   private readonly maxResponseBytes: number;
-  private readonly getAccessToken?: () => string | Promise<string>;
+  private readonly getAccessToken: (() => string | Promise<string>) | undefined;
   private readonly defaultHeaders: Readonly<Record<string, string>>;
 
   constructor(options: AetherClientOptions) {
@@ -139,7 +139,7 @@ export class AetherClient {
       const response = await this.fetchImpl(url, {
         method,
         headers,
-        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
         signal: controller.signal
       });
       const requestId = requestIdFrom(response);
