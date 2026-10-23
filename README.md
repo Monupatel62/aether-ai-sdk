@@ -19,3 +19,15 @@ Documentation baseline established. This repository is not considered implemente
 - Version public contracts and document breaking changes.
 - Use synthetic or sanitized data in tests.
 - Update the master catalog when ownership or cross-repository contracts change.
+
+## Repository documents
+
+- [Project specification](docs/PROJECT_SPEC.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Dependencies and contracts](docs/DEPENDENCIES_AND_CONTRACTS.md)
+- [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
+- [Research and licenses](docs/RESEARCH_AND_LICENSES.md)
+- [Technical design](docs/TECHNICAL_DESIGN.md)
+- [Security review](docs/SECURITY_REVIEW.md)
+- [Engineering standard](docs/ENGINEERING_STANDARD.md)
+- [Work log](docs/WORKLOG.md)
