@@ -3,6 +3,32 @@ export class AetherApiError extends Error {
   constructor(status, code, message, requestId = null) { super(message); this.name = "AetherApiError"; this.status = status; this.code = code; this.requestId = requestId; }
 }
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
+async function readBoundedResponse(response, maxBytes) {
+  if (!response || !response.body || typeof response.body.getReader !== "function") {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > maxBytes) throw new AetherApiError(502, "response_too_large", "API response exceeds the configured limit", response.headers?.get?.("x-request-id") ?? null);
+    return text;
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new AetherApiError(502, "response_too_large", "API response exceeds the configured limit", response.headers?.get?.("x-request-id") ?? null);
+      }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return new TextDecoder().decode(bytes);
+}
 export function createAetherClient({ baseUrl, getAccessToken, fetchImpl = globalThis.fetch, timeoutMs = 30_000, tenantId }) {
   if (typeof baseUrl !== "string") throw new TypeError("baseUrl is required");
   let parsed;
@@ -16,21 +42,43 @@ export function createAetherClient({ baseUrl, getAccessToken, fetchImpl = global
 
   const root = parsed.toString().replace(/\/$/, "");
   async function request(path, body, signal) {
-    let token;
-    try { token = await getAccessToken(); } catch { throw new AetherApiError(401, "token_unavailable", "Access token is unavailable"); }
-    if (typeof token !== "string" || !token.trim() || /[\r\n]/.test(token)) throw new AetherApiError(401, "token_unavailable", "Access token is unavailable");
+    if (signal?.aborted) throw new AetherApiError(408, "request_aborted", "API request was aborted");
+    let serialized;
+    try { serialized = JSON.stringify(body); } catch { throw new AetherApiError(400, "invalid_request", "Request body is not JSON-serializable"); }
+    if (typeof serialized !== "string" || new TextEncoder().encode(serialized).byteLength > 1_048_576) {
+      throw new AetherApiError(413, "request_too_large", "API request exceeds the configured limit");
+    }
 
     const controller = new AbortController();
+    let timedOut = false;
     const onAbort = () => controller.abort(signal?.reason);
-    if (signal?.aborted) onAbort();
-    else signal?.addEventListener("abort", onAbort, { once: true });
-    const timeout = setTimeout(() => controller.abort(new Error("Request timed out")), timeoutMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    let timeout;
+    let rejectAbort;
+    const aborted = new Promise((_, reject) => {
+      rejectAbort = reject;
+      controller.signal.addEventListener("abort", () => {
+        reject(new AetherApiError(408, timedOut ? "request_timeout" : "request_aborted", timedOut ? "API request timed out" : "API request was aborted"));
+      }, { once: true });
+    });
+    timeout = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
     try {
+      let token;
+      try {
+        token = await Promise.race([Promise.resolve().then(() => getAccessToken()), aborted]);
+      } catch (error) {
+        if (error instanceof AetherApiError) throw error;
+        throw new AetherApiError(401, "token_unavailable", "Access token is unavailable");
+      }
+      if (typeof token !== "string" || !token.trim() || /[\\r\\n]/.test(token)) throw new AetherApiError(401, "token_unavailable", "Access token is unavailable");
+
       const headers = { authorization: `Bearer ${token}`, accept: "application/json", "content-type": "application/json" };
       if (tenantId) headers["x-tenant-id"] = tenantId;
-      const response = await fetchImpl(`${root}${path}`, { method: "POST", headers, body: JSON.stringify(body), signal: controller.signal });
-      const raw = await response.text();
-      if (new TextEncoder().encode(raw).byteLength > MAX_RESPONSE_BYTES) throw new AetherApiError(502, "response_too_large", "API response exceeds the configured limit", response.headers?.get?.("x-request-id") ?? null);
+      const response = await Promise.race([
+        Promise.resolve().then(() => fetchImpl(`${root}${path}`, { method: "POST", headers, body: serialized, signal: controller.signal })),
+        aborted,
+      ]);
+      const raw = await Promise.race([readBoundedResponse(response, MAX_RESPONSE_BYTES), aborted]);
       let data;
       try { data = raw ? JSON.parse(raw) : null; } catch { throw new AetherApiError(502, "invalid_response", "API returned an invalid response", response.headers?.get?.("x-request-id") ?? null); }
       const requestId = response.headers?.get?.("x-request-id") ?? null;
@@ -41,7 +89,7 @@ export function createAetherClient({ baseUrl, getAccessToken, fetchImpl = global
       return data;
     } catch (error) {
       if (error instanceof AetherApiError) throw error;
-      if (controller.signal.aborted) throw new AetherApiError(408, "request_aborted_or_timed_out", "API request was aborted or timed out");
+      if (controller.signal.aborted) throw new AetherApiError(408, timedOut ? "request_timeout" : "request_aborted", timedOut ? "API request timed out" : "API request was aborted");
       throw new AetherApiError(0, "network_error", "Could not reach the Aether API");
     } finally {
       clearTimeout(timeout);
