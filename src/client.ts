@@ -98,6 +98,9 @@ export class AetherClient {
   async request<T>(path: string, options: RequestOptions = {}): Promise<AetherResponse<T>> {
     const method = options.method ?? "GET";
     const retries = method === "GET" ? Math.max(0, Math.min(MAX_RETRIES, options.maxRetries ?? 0)) : 0;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("//") || path.includes(String.fromCharCode(92))) {
+      throw new AetherError("CONFIGURATION", "Request path must be a relative API path, not an absolute URL.");
+    }
     const url = new URL(path.replace(/^\/+/, ""), this.baseUrl.toString() + "/");
     if (url.origin !== this.baseUrl.origin || !url.pathname.startsWith(this.baseUrl.pathname.replace(/\/$/, "") + "/")) {
       throw new AetherError("CONFIGURATION", "Request path must remain within the configured Aether API base path.");
